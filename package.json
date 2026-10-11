@@ -19,7 +19,13 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "db:seed": "npm run build && node dist/db/seed.js",
+    "db:seed:prod": "npm run build && node dist/db/seed.js --force",
+    "db:reset": "npm run build && node dist/db/reset.js",
+    "db:reset:prod": "npm run build && node dist/db/reset.js --force",
+    "db:migrate:seed": "npm run build && node dist/db/migrate-seed.js --confirm-reset",
+    "db:migrate:seed:prod": "npm run build && node dist/db/migrate-seed.js --force"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",

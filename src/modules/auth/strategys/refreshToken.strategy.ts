@@ -36,7 +36,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
       throw new UnauthorizedException();
     }
 
-    const refreshToken = authRefresh.replace('Bearer ', '').trim();
+    const refreshToken = authRefresh.replace(/^Bearer\s+/i, '').trim();
 
     const [user] = await this.db
       .select()

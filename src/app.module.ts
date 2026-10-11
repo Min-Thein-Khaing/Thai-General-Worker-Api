@@ -7,6 +7,10 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { UploadModule } from './modules/upload/upload.module.js';
+import { CompanyModule } from './modules/company/company.module.js';
+import { YearModule } from './modules/year/year.module.js';
+import { ManagerModule } from './modules/manager/manager.module.js';
+import { WorkerModule } from './modules/worker/worker.module.js';
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { UploadModule } from './modules/upload/upload.module.js';
       },
     ]),
      UploadModule,
+     CompanyModule,
+     YearModule,
+     ManagerModule,
+     WorkerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
