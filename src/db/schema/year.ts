@@ -1,9 +1,9 @@
-import { date, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { date, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { user } from './user.js';
 
 export const year = pgTable('year', {
   id: uuid('id').primaryKey(),
-  userId: text('user_id')
+  userId: uuid('user_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   startYear: date('start_year').notNull(),

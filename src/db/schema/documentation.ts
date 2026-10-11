@@ -1,9 +1,9 @@
-import { pgTable, text, timestamp, uuid, boolean, bigint } from 'drizzle-orm/pg-core';
+import { bigint, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { user } from './user.js';
 
 export const document = pgTable('document', {
   id: uuid('id').primaryKey(),
-  userId: text('user_id')
+  userId: uuid('user_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   objectKey: text('object_key').notNull().unique(),

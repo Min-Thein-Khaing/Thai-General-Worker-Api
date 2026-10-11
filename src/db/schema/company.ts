@@ -1,9 +1,9 @@
-import { pgTable, text, timestamp, uuid,boolean } from 'drizzle-orm/pg-core';
+import { boolean, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { user } from './user.js';
 
 export const company = pgTable('company', {
   id: uuid('id').primaryKey(),
-  userId: text('user_id')
+  userId: uuid('user_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   companyName: text('company_name').notNull(),

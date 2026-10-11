@@ -4,12 +4,12 @@ import { company } from './company.js';
 
 export const manager = pgTable('manager', {
   id: uuid('id').primaryKey(),
-  userId: text('user_id')
+  userId: uuid('user_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
-  companyId: text('company_id')
+  companyId: uuid('company_id')
     .notNull()
-    .references(() => company.id, { onDelete: 'restrict' }),  
+    .references(() => company.id, { onDelete: 'restrict' }),
   gender: text('gender'),
   phone: text('phone'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
