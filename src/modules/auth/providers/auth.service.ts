@@ -1,6 +1,6 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
@@ -27,7 +27,12 @@ export class AuthService {
     const [userRecord] = await this.db
       .select()
       .from(schema.user)
-      .where(eq(schema.user.email, email))
+      .where(
+        and(
+          eq(schema.user.email, email),
+          eq(schema.user.isArchived, false),
+        ),
+      )
       .limit(1);
 
     if (!userRecord) {
@@ -67,13 +72,15 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_SECRET'),
+        secret: this.configService.getOrThrow<string>('JWT_SECRET'),
         expiresIn: '15m',
       }),
       this.jwtService.signAsync(
         { ...payload, refreshIdToken },
         {
-          secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET'),
+          secret: this.configService.getOrThrow<string>(
+            'JWT_REFRESH_TOKEN_SECRET',
+          ),
           expiresIn: '7d',
         },
       ),
@@ -83,10 +90,10 @@ export class AuthService {
   }
 
   async updateRefreshToken(id: string, refreshToken: string) {
-const hashedRefreshToken = await this.hashProvider.hash(refreshToken);
+    const hashedRefreshToken = await this.hashProvider.hash(refreshToken);
     await this.db
       .update(user)
-      .set({ refreshToken:  hashedRefreshToken })
+      .set({ refreshToken: hashedRefreshToken })
       .where(eq(user.id, id));
   }
 
@@ -101,8 +108,17 @@ const hashedRefreshToken = await this.hashProvider.hash(refreshToken);
     const [userRecord] = await this.db
       .select()
       .from(schema.user)
-      .where(eq(schema.user.id, id))
+      .where(
+        and(
+          eq(schema.user.id, id),
+          eq(schema.user.isArchived, false),
+        ),
+      )
       .limit(1);
+
+    if (!userRecord) {
+      throw new UnauthorizedException();
+    }
 
     const tokens = await this.generateTokens(userRecord.id, userRecord.email);
     await this.updateRefreshToken(userRecord.id, tokens.refreshToken);

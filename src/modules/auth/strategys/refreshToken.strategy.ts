@@ -4,13 +4,15 @@ import { PassportStrategy } from '@nestjs/passport';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { schema } from '../../../db/index.js';
-import { eq } from 'drizzle-orm';
-import { Request } from 'express';
+import { and, eq } from 'drizzle-orm';
+import type { Request } from 'express';
 import { HashProvider } from '../providers/hash.provider.js';
+
 interface JwtPayload {
   sub: string;
   email: string;
 }
+
 @Injectable()
 export class RefreshTokenStrategy extends PassportStrategy(
   Strategy,
@@ -25,7 +27,9 @@ export class RefreshTokenStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_REFRESH_TOKEN_SECRET')!,
+      secretOrKey: configService.getOrThrow<string>(
+        'JWT_REFRESH_TOKEN_SECRET',
+      ),
       passReqToCallback: true,
     });
   }
@@ -39,15 +43,23 @@ export class RefreshTokenStrategy extends PassportStrategy(
     const refreshToken = authRefresh.replace(/^Bearer\s+/i, '').trim();
 
     const [user] = await this.db
-      .select()
+      .select({
+        id: schema.user.id,
+        email: schema.user.email,
+        fullName: schema.user.fullName,
+        role: schema.user.role,
+        refreshToken: schema.user.refreshToken,
+      })
       .from(schema.user)
-      .where(eq(schema.user.id, payload.sub))
+      .where(
+        and(
+          eq(schema.user.id, payload.sub),
+          eq(schema.user.isArchived, false),
+        ),
+      )
       .limit(1);
 
-    if (!user) {
-      throw new UnauthorizedException();
-    }
-if (!user || !user.refreshToken) {
+    if (!user?.refreshToken) {
       throw new UnauthorizedException();
     }
 

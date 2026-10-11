@@ -28,7 +28,7 @@ export class WorkerController {
   }
 
   @Get()
-  @Roles('ADMIN')
+  @Roles('ADMIN','MANAGER')
   findAll() {
     return this.workerService.findAll();
   }

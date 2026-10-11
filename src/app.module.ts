@@ -11,6 +11,9 @@ import { CompanyModule } from './modules/company/company.module.js';
 import { YearModule } from './modules/year/year.module.js';
 import { ManagerModule } from './modules/manager/manager.module.js';
 import { WorkerModule } from './modules/worker/worker.module.js';
+import { DocumentModule } from './modules/document/document.module.js';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -32,8 +35,15 @@ import { WorkerModule } from './modules/worker/worker.module.js';
      YearModule,
      ManagerModule,
      WorkerModule,
+     DocumentModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

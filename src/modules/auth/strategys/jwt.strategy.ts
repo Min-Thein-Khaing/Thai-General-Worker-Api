@@ -1,10 +1,10 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { schema } from '../../../db/index.js';
 import { ConfigService } from '@nestjs/config';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 interface PayLoad {
   sub: string;
@@ -20,16 +20,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET')!,
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }
 
   async validate(payload: PayLoad) {
-    const { sub: id, email } = payload;
+    const id = payload.sub;
     const [user] = await this.db
-      .select()
+      .select({
+        id: schema.user.id,
+        email: schema.user.email,
+        fullName: schema.user.fullName,
+        role: schema.user.role,
+      })
       .from(schema.user)
-      .where(eq(schema.user.id, id))
+      .where(
+        and(
+          eq(schema.user.id, id),
+          eq(schema.user.isArchived, false),
+        ),
+      )
       .limit(1);
     if (!user) {
       throw new UnauthorizedException();

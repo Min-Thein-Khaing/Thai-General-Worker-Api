@@ -96,4 +96,15 @@ export class UploadService {
       }),
     );
   }
+
+  async deleteUserImage(imageUrl: string) {
+    const publicUrl = this.config
+      .getOrThrow<string>('R2_PUBLIC_URL')
+      .replace(/\/+$/, '');
+    const publicUrlPrefix = `${publicUrl}/`;
+
+    if (imageUrl.startsWith(publicUrlPrefix)) {
+      await this.deleteFile(imageUrl.slice(publicUrlPrefix.length));
+    }
+  }
 }

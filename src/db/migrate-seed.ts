@@ -44,10 +44,12 @@ async function migrateAndSeed() {
   );
   const seedScript = resolve(process.cwd(), 'dist', 'db', 'seed.js');
 
-  console.log('Applying Drizzle schema to the database...');
+  console.log('\n🔄 Drizzle DB Reset (like prisma db reset)');
+  console.log('─'.repeat(50));
+  console.log('Step 1/2: Pushing schema to database...');
   run(process.execPath, [drizzleKitCli, 'push']);
 
-  console.log('Clearing app data and inserting seed accounts...');
+  console.log('Step 2/2: Wiping data + seeding defaults...');
   run(process.execPath, [seedScript, '--force']);
 }
 

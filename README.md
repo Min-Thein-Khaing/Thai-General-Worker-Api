@@ -59,7 +59,30 @@ $ npm run test:cov
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Build and start the production container with Docker Compose:
+
+```bash
+docker compose up --build -d
+```
+
+Docker Compose reads these required settings from the shell environment or the root `.env` file. Keep `.env` out of version control; use your deployment platform's secret manager for production secrets.
+
+```dotenv
+DATABASE_URL=<managed-postgres-connection-string>
+JWT_SECRET=<long-random-secret>
+JWT_REFRESH_TOKEN_SECRET=<different-long-random-secret>
+ALLOWED_ORIGINS=https://your-frontend.example
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=<r2-access-key-id>
+R2_SECRET_ACCESS_KEY=<r2-secret-access-key>
+R2_BUCKET_NAME=<r2-bucket-name>
+R2_PUBLIC_URL=https://<public-r2-domain>
+HOST_PORT=3000
+```
+
+The Compose file runs only the API and expects PostgreSQL to be hosted separately. Put the API behind a TLS-terminating reverse proxy, restrict database and R2 credentials, and configure the allowed frontend origin before exposing it publicly. Do not use the database reset/seed scripts against production data.
+
+See the [NestJS deployment documentation](https://docs.nestjs.com/deployment) for additional deployment guidance.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 

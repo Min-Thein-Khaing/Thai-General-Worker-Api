@@ -266,6 +266,7 @@ export class UserService {
       .update(user)
       .set({ password: hashedPassword })
       .where(and(eq(user.id, id), eq(user.isArchived, false)));
+    return { message: 'Change Password Successfully' };
   }
 
   async remove(id: string) {
@@ -275,12 +276,12 @@ export class UserService {
       .where(and(eq(user.id, id), eq(user.isArchived, false)))
       .returning({ id: user.id, imageUrl: user.imageUrl });
 
-    if (archivedUser.imageUrl) {
-      await this.uploadService.deleteFile(archivedUser.imageUrl);
-    }
-
     if (!archivedUser) {
       throw new NotFoundException(`User ${id} not found`);
+    }
+
+    if (archivedUser.imageUrl) {
+      await this.uploadService.deleteUserImage(archivedUser.imageUrl);
     }
 
     return { id: archivedUser.id, isArchived: true };

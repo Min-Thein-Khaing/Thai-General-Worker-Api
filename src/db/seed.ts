@@ -5,34 +5,33 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { schema } from './index.js';
 
-const localTestAccounts = [
+// ─── Default accounts (prisma db reset ပုံစံ) ──────────────────────────────
+// ဒီ accounts တွေက always ရှိနေမယ် — testing အတွက် default data
+const DEFAULT_ACCOUNTS = [
   {
-    id: randomUUID(),
-    fullName: 'Local Test Admin',
+    fullName: 'Admin User',
     email: 'admin@example.com',
     password: 'Admin123!',
-    role: 'ADMIN',
+    role: 'ADMIN' as const,
   },
   {
-    id: randomUUID(),
-    fullName: 'Local Test Manager',
+    fullName: 'Manager User',
     email: 'manager@example.com',
     password: 'Manager123!',
-    role: 'MANAGER',
+    role: 'MANAGER' as const,
   },
   {
-    id: randomUUID(),
-    fullName: 'Local Test Worker',
+    fullName: 'Worker User',
     email: 'worker@example.com',
     password: 'Worker123!',
-    role: 'GENERAL_WORKER',
+    role: 'GENERAL_WORKER' as const,
   },
 ] as const;
 
 async function seed() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL must point to a local PostgreSQL database.');
+    throw new Error('DATABASE_URL must be set.');
   }
 
   const allowDestructive =
@@ -41,11 +40,13 @@ async function seed() {
 
   if (!allowDestructive) {
     const parsedUrl = new URL(databaseUrl);
-    const databaseHost = parsedUrl.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    const databaseHost = parsedUrl.hostname
+      .replace(/^\[|\]$/g, '')
+      .toLowerCase();
     if (!['localhost', '127.0.0.1', '::1'].includes(databaseHost)) {
       throw new Error(
         `Refusing to clear non-local database host "${databaseHost}". ` +
-        `Run "npm run db:seed:prod" to seed a production database.`,
+          `Run "npm run db:seed:prod" to reset a production database.`,
       );
     }
   }
@@ -54,37 +55,48 @@ async function seed() {
   const db = drizzle(client, { schema });
 
   try {
-    const [admin, managerAccount, workerAccount] = await Promise.all(
-      localTestAccounts.map(async (account) => ({
-        ...account,
+    console.log('⏳ Hashing passwords...');
+    const accounts = await Promise.all(
+      DEFAULT_ACCOUNTS.map(async (account) => ({
+        id: randomUUID(),
+        fullName: account.fullName,
+        email: account.email,
         password: await bcrypt.hash(account.password, 10),
+        role: account.role,
+        isArchived: false,
       })),
     );
+
+    const [admin, manager, workerUser] = accounts;
 
     const companyId = randomUUID();
     const yearId = randomUUID();
     const managerId = randomUUID();
     const workerId = randomUUID();
 
+    console.log('🗑️  Wiping all tables (TRUNCATE CASCADE)...');
     await db.transaction(async (tx) => {
-      await tx.delete(schema.document);
-      await tx.delete(schema.worker);
-      await tx.delete(schema.manager);
-      await tx.delete(schema.year);
-      await tx.delete(schema.company);
-      await tx.delete(schema.user);
+      // TRUNCATE CASCADE — prisma db reset ပုံစံ (ပိုမြန်, FK cascade)
+      await tx.execute(
+        `TRUNCATE TABLE
+           "document",
+           "worker",
+           "manager",
+           "year",
+           "company",
+           "user"
+         CASCADE`,
+      );
 
-      await tx.insert(schema.user).values([
-        { ...admin, isArchived: false },
-        { ...managerAccount, isArchived: false },
-        { ...workerAccount, isArchived: false },
-      ]);
+      console.log('🌱 Inserting default accounts...');
+
+      await tx.insert(schema.user).values(accounts);
 
       await tx.insert(schema.company).values({
         id: companyId,
         userId: admin.id,
-        companyName: 'Local Test Company',
-        address: 'Local development data',
+        companyName: 'Default Test Company',
+        address: 'Test address',
       });
 
       await tx.insert(schema.year).values({
@@ -96,14 +108,14 @@ async function seed() {
 
       await tx.insert(schema.manager).values({
         id: managerId,
-        userId: managerAccount.id,
+        userId: manager.id,
         companyId,
         gender: 'MALE',
       });
 
       await tx.insert(schema.worker).values({
         id: workerId,
-        userId: workerAccount.id,
+        userId: workerUser.id,
         managerId,
         yearId,
         companyId,
@@ -111,16 +123,19 @@ async function seed() {
       });
     });
 
-    console.log('Local database seeded successfully.');
-    for (const account of localTestAccounts) {
-      console.log(`${account.role}: ${account.email} / ${account.password}`);
+    console.log('\n✅ Database reset complete!\n');
+    console.log('─'.repeat(50));
+    console.log('Default accounts:');
+    for (const account of DEFAULT_ACCOUNTS) {
+      console.log(`  ${account.role.padEnd(15)} ${account.email}  /  ${account.password}`);
     }
+    console.log('─'.repeat(50));
   } finally {
     await client.end();
   }
 }
 
 seed().catch((error: unknown) => {
-  console.error('Local database seed failed:', error);
+  console.error('❌ Database seed failed:', error);
   process.exitCode = 1;
 });
