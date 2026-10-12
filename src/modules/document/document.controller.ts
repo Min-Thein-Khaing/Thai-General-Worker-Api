@@ -42,7 +42,7 @@ export class DocumentController {
    * Admin က worker ရဲ့ document file တွေ upload လုပ်မယ် (max 10 files)
    * - PDF, JPEG, PNG, WEBP သာ ခွင့်ပြု
    * - File size max 20MB per file
-   * - multipart/form-data: files[] + workerId
+   * - multipart/form-data: files[] + documentTypes[] (same order) + workerId
    */
   @Post('upload')
   @Roles('ADMIN')
@@ -70,7 +70,12 @@ export class DocumentController {
     @Req() req: Request,
   ) {
     const user = req.user as UserData;
-    return this.documentService.uploadDocuments(files, dto.workerId, user.id);
+    return this.documentService.uploadDocuments(
+      files,
+      dto.documentTypes,
+      dto.workerId,
+      user.id,
+    );
   }
 
   /**

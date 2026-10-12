@@ -18,6 +18,7 @@ import { eq, and } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../../db/schema/index.js';
 import { document } from '../../../db/schema/documentation.js';
+import type { DocumentType } from '../../../db/schema/documentation.js';
 import { worker } from '../../../db/schema/worker.js';
 
 // Worker တစ်ယောက်မှာ upload လုပ်နိုင်တဲ့ file အများဆုံး
@@ -47,18 +48,24 @@ export class DocumentService {
   // ── Upload: multiple files တစ်ကြိမ်တည်း ──────────────────────────────────
   async uploadDocuments(
     files: Express.Multer.File[],
+    documentTypes: DocumentType[],
     workerId: string,
     userId: string,
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files provided');
     }
+    if (documentTypes.length !== files.length) {
+      throw new BadRequestException(
+        'Provide exactly one documentType for each uploaded file',
+      );
+    }
 
     // Worker ရှိ/မရှိ စစ်
     const [workerRecord] = await this.db
       .select()
-      .from(worker)
-      .where(eq(worker.id, workerId))
+      .from(schema.worker)
+      .where(eq(schema.worker.id, workerId))
       .limit(1);
     if (!workerRecord) {
       throw new NotFoundException(`Worker ${workerId} not found`);
@@ -66,9 +73,9 @@ export class DocumentService {
 
     // ယခု worker မှာ document ဘယ်နှစ်ခုရှိပြီလဲ စစ်
     const existingDocs = await this.db
-      .select({ id: document.id })
-      .from(document)
-      .where(eq(document.workerId, workerId));
+      .select({ id: schema.document.id })
+      .from(schema.document)
+      .where(eq(schema.document.workerId, workerId));
 
     const totalAfterUpload = existingDocs.length + files.length;
     if (totalAfterUpload > MAX_FILES_PER_WORKER) {
@@ -79,8 +86,8 @@ export class DocumentService {
     }
 
     // R2 ကို တပြိုင်နက် upload (Promise.all loop)
-    const uploaded = await Promise.all(
-      files.map(async (file) => {
+    const uploaded = (await Promise.all(
+      files.map(async (file, index) => {
         const ext = extname(file.originalname).toLowerCase();
         const key = `documents/${workerId}/${randomUUID()}${ext}`;
 
@@ -99,11 +106,14 @@ export class DocumentService {
           workerId,
           objectKey: key,
           originalName: file.originalname,
+          documentType: documentTypes[
+            index
+          ] as (typeof document.$inferInsert)['documentType'],
           mimeType: file.mimetype,
           size: file.size,
-        };
+        } satisfies typeof document.$inferInsert;
       }),
-    );
+    )) as Array<typeof document.$inferInsert>;
 
     // DB မှာ တစ်ကြိမ်တည်း insert (batch)
     const inserted = await this.db
@@ -171,9 +181,7 @@ export class DocumentService {
     const [doc] = await this.db
       .select()
       .from(document)
-      .where(
-        and(eq(document.id, documentId), eq(document.userId, userId)),
-      )
+      .where(and(eq(document.id, documentId), eq(document.userId, userId)))
       .limit(1);
 
     if (!doc) {

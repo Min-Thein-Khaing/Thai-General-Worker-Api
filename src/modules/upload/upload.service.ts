@@ -1,8 +1,4 @@
-
-import {
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
@@ -44,9 +40,19 @@ export class UploadService {
     };
   }
 
-
-
   async uploadUserImage(file: Express.Multer.File, userId: string) {
+    return this.uploadImage(file, 'users', userId);
+  }
+
+  async uploadWorkerImage(file: Express.Multer.File, workerId: string) {
+    return this.uploadImage(file, 'workers', workerId);
+  }
+
+  private async uploadImage(
+    file: Express.Multer.File,
+    folder: 'users' | 'workers',
+    id: string,
+  ) {
     const extensionByMimeType: Record<string, string> = {
       'image/jpeg': '.jpg',
       'image/png': '.png',
@@ -58,7 +64,7 @@ export class UploadService {
       throw new InternalServerErrorException('Unsupported image type');
     }
 
-    const key = `users/${userId}/${randomUUID()}${extension}`;
+    const key = `${folder}/${id}/${randomUUID()}${extension}`;
     await this.putObject(file, key);
 
     const publicUrl = this.config
@@ -98,13 +104,24 @@ export class UploadService {
   }
 
   async deleteUserImage(imageUrl: string) {
+    await this.deleteImage(imageUrl, 'users');
+  }
+
+  async deleteWorkerImage(imageUrl: string) {
+    await this.deleteImage(imageUrl, 'workers');
+  }
+
+  private async deleteImage(imageUrl: string, folder: 'users' | 'workers') {
     const publicUrl = this.config
       .getOrThrow<string>('R2_PUBLIC_URL')
       .replace(/\/+$/, '');
     const publicUrlPrefix = `${publicUrl}/`;
 
-    if (imageUrl.startsWith(publicUrlPrefix)) {
-      await this.deleteFile(imageUrl.slice(publicUrlPrefix.length));
+    const objectKey = imageUrl.startsWith(publicUrlPrefix)
+      ? imageUrl.slice(publicUrlPrefix.length)
+      : undefined;
+    if (objectKey?.startsWith(`${folder}/`)) {
+      await this.deleteFile(objectKey);
     }
   }
 }

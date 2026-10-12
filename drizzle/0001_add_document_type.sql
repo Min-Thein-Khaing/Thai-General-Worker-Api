@@ -1,0 +1,1 @@
+ALTER TABLE "document" ADD COLUMN "document_type" text DEFAULT 'OTHER' NOT NULL;

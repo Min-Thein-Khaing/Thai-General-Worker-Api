@@ -8,6 +8,48 @@
       "when": 1791720164316,
       "tag": "0000_damp_carmella_unuscione",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791802350841,
+      "tag": "0001_add_document_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791803724030,
+      "tag": "0002_document_type_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791814154836,
+      "tag": "0003_parched_shiva",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791814556255,
+      "tag": "0004_wonderful_red_ghost",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791817090576,
+      "tag": "0005_bumpy_gunslinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791817459982,
+      "tag": "0006_add_worker_image_url",
+      "breakpoints": true
     }
   ]
 }

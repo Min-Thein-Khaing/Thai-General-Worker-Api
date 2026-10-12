@@ -5,6 +5,7 @@ import { manager } from './manager.js';
 import { company } from './company.js';
 
 export const genderEnum = pgEnum('gender', ['MALE', 'FEMALE']);
+export const typeEnum = pgEnum('type', ['OLD', 'NEW']);
 
 export const worker = pgTable('worker', {
   id: uuid('id').primaryKey(),
@@ -26,6 +27,8 @@ export const worker = pgTable('worker', {
   typeOfBook: text('type_of_book'),
   gender: genderEnum('gender').notNull(),
   phone: text('phone'),
+  type: typeEnum('type').notNull().default('NEW'),
+  imageUrl: text('image_url'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

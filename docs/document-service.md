@@ -32,15 +32,21 @@ R2_BUCKET_NAME=<r2-bucket-name>
 
 ## Upload လုပ်ခြင်း
 
-Upload API သည် Admin role လိုအပ်ပြီး `multipart/form-data` ဖြင့် `files` ဖိုင်အများအပြားနှင့် `workerId` ကို လက်ခံပါတယ်။ PDF, JPEG, PNG, WEBP ကိုသာ လက်ခံပြီး ဖိုင်တစ်ဖိုင်လျှင် 20 MB အများဆုံးဖြစ်ပါတယ်။ Worker တစ်ယောက်တွင် document စုစုပေါင်း ၁၀ ခုထက် မကျော်ရပါ။
+Upload API သည် Admin role လိုအပ်ပြီး `multipart/form-data` ဖြင့် `files`, ဖိုင်တစ်ခုစီအတွက် `documentTypes` တန်ဖိုးတစ်ခုစီ၊ `workerId` တို့ကို လက်ခံပါတယ်။ `documentTypes` များ၏အစီအစဉ်သည် `files` များ၏အစီအစဉ်နှင့် ကိုက်ညီရပါမယ်။ တစ်ကြိမ်တည်းမှာ ၂ ဖိုင်တင်ရင် ၂ ခုသော type ပို့ရုံပါ။ PDF, JPEG, PNG, WEBP ကိုသာ လက်ခံပြီး ဖိုင်တစ်ဖိုင်လျှင် 20 MB အများဆုံးဖြစ်ပါတယ်။ Worker တစ်ယောက်တွင် document စုစုပေါင်း ၁၀ ခုထက် မကျော်ရပါ။
+
+ခွင့်ပြုထားသော `documentTypes` နဲ့ Frontend မှာပြမည့်အမည်များမှာ `PAYMENT_SLIP_100` (ငွေချေစာရွက် 100), `PAYMENT_SLIP_900` (ငွေချေစာရွက် 900), `PAW_TAW_50` (ပေါတော 50), `BLOOD_TEST_CERTIFICATE` (သွေးစစ်လက်မှတ်), `PA_KAN_DOCUMENT` (ပကန်းစာရွက်), `BINU_MAT_DOCUMENT` (ဘိုင်နုမတ်စာရွက်), `WORK_PERMIT_DOCUMENT` (ဝေါ့ပါမစ်စာရွက်), `NEW_WORKER_QR_APPOINTMENT` (QR ရက်ချိန်းစာရွက် လူသစ်) တို့ဖြစ်ပါတယ်။ API က ဒီရှစ်မျိုးကိုသာ အသစ်တင်ခွင့်ပြုပါတယ်။ အမျိုးအစားအဟောင်းကို မသိနိုင်တဲ့ စာရွက်စာတမ်းများ၏ အချက်အလက်မပျောက်စေရန် database enum ထဲမှာ `OTHER` ကိုလည်း ထိန်းထားပါတယ်။ အသစ်တင်ရာမှာ `OTHER` ကို ရွေးခွင့်မရှိပါ။ Frontend project က ဒီ repository ထဲမှာ မပါဝင်တဲ့အတွက် dropdown ကို frontend မှာ enum key နဲ့ မြန်မာအမည်ကို တွဲပြပါ။
 
 ```bash
-curl -X POST "http://localhost:3000/documents/upload" \
+curl -X POST "http://localhost:3000/api/documents/upload" \
   -H "Authorization: Bearer <admin-jwt>" \
   -F "workerId=<worker-uuid>" \
+  -F "documentTypes=PAYMENT_SLIP_100" \
   -F "files=@./passport.pdf;type=application/pdf" \
+  -F "documentTypes=NEW_WORKER_QR_APPOINTMENT" \
   -F "files=@./photo.jpg;type=image/jpeg"
 ```
+
+တင်ထားသောဖိုင်၏ မူရင်းနာမည်ကို `originalName`၊ ရွေးထားသောအမျိုးအစားကို `documentType` အဖြစ် သီးခြားသိမ်းပါတယ်။ တစ်ဖိုင်ချင်းစီအတွက် type တစ်ခု မဖြစ်မနေပို့ရပြီး သတ်မှတ်ထားသော enum ရှစ်မျိုးထဲမှ တစ်မျိုးဖြစ်ရပါမယ်။
 
 ## Service ထဲတွင် R2 client ဖန်တီးပုံ
 
@@ -60,7 +66,7 @@ this.s3 = new S3Client({
 
 ## `DocumentService` ရဲ့ upload အလုပ်စဉ်
 
-Controller က file type, file size နဲ့ Admin role ကို စစ်ပြီးနောက် `uploadDocuments` ကို ခေါ်ပါတယ်။ Service က worker နဲ့ limit ကိုစစ်ကာ UUID ပါတဲ့ object key တစ်ခုစီဖြင့် ဖိုင်များကို R2 သို့တင်ပါတယ်။ ထို့နောက် object key နှင့် မူရင်းဖိုင်အမည်၊ MIME type၊ size စတာတွေကို database ထဲ batch insert လုပ်ပါတယ်။
+Controller က file type, file size နဲ့ Admin role ကို စစ်ပြီးနောက် `uploadDocuments` ကို ခေါ်ပါတယ်။ Service က worker နဲ့ limit ကိုစစ်ကာ UUID ပါတဲ့ object key တစ်ခုစီဖြင့် ဖိုင်များကို R2 သို့တင်ပါတယ်။ ထို့နောက် object key၊ document type၊ မူရင်းဖိုင်အမည်၊ MIME type၊ size စတာတွေကို database ထဲ batch insert လုပ်ပါတယ်။
 
 ```ts
 const key = `documents/${workerId}/${randomUUID()}${ext}`;
@@ -81,13 +87,13 @@ await this.s3.send(
 
 ```bash
 curl -H "Authorization: Bearer <jwt>" \
-  "http://localhost:3000/documents/worker/<worker-uuid>"
+  "http://localhost:3000/api/documents/worker/<worker-uuid>"
 
 curl -H "Authorization: Bearer <jwt>" \
-  "http://localhost:3000/documents/<document-uuid>/download"
+  "http://localhost:3000/api/documents/<document-uuid>/download"
 
 curl -X DELETE -H "Authorization: Bearer <admin-jwt>" \
-  "http://localhost:3000/documents/<document-uuid>"
+  "http://localhost:3000/api/documents/<document-uuid>"
 ```
 
 ## အဓိက code ဖိုင်များ

@@ -1,0 +1,18 @@
+CREATE TYPE "public"."document_type_new" AS ENUM('PAYMENT_SLIP_100', 'PAYMENT_SLIP_900', 'PAW_TAW_50', 'BLOOD_TEST_CERTIFICATE', 'PA_KAN_DOCUMENT', 'BINU_MAT_DOCUMENT', 'WORK_PERMIT_DOCUMENT', 'NEW_WORKER_QR_APPOINTMENT', 'OTHER');--> statement-breakpoint
+ALTER TABLE "document" ALTER COLUMN "document_type" DROP DEFAULT;--> statement-breakpoint
+ALTER TABLE "document" ALTER COLUMN "document_type" SET DATA TYPE "public"."document_type_new" USING (
+  CASE "document_type"::text
+    WHEN 'PAYMENT_SLIP_100' THEN 'PAYMENT_SLIP_100'
+    WHEN 'PAYMENT_SLIP_900' THEN 'PAYMENT_SLIP_900'
+    WHEN 'PAW_TAW_50' THEN 'PAW_TAW_50'
+    WHEN 'BLOOD_TEST_CERTIFICATE' THEN 'BLOOD_TEST_CERTIFICATE'
+    WHEN 'PA_KAN_DOCUMENT' THEN 'PA_KAN_DOCUMENT'
+    WHEN 'BINU_MAT_DOCUMENT' THEN 'BINU_MAT_DOCUMENT'
+    WHEN 'WORK_PERMIT_DOCUMENT' THEN 'WORK_PERMIT_DOCUMENT'
+    WHEN 'NEW_WORKER_QR_APPOINTMENT' THEN 'NEW_WORKER_QR_APPOINTMENT'
+    WHEN 'OTHER' THEN 'OTHER'
+    ELSE 'OTHER'
+  END
+)::"public"."document_type_new";--> statement-breakpoint
+DROP TYPE "public"."document_type";--> statement-breakpoint
+ALTER TYPE "public"."document_type_new" RENAME TO "document_type";
