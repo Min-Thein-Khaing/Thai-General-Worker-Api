@@ -31,6 +31,6 @@ import { RefreshTokenStrategy } from './strategys/refreshToken.strategy.js';
       }),
     }),
   ],
-  exports: [AuthService],
+  exports: [AuthService, HashProvider],
 })
 export class AuthModule {}
