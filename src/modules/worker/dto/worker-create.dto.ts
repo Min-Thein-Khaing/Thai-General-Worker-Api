@@ -1,5 +1,17 @@
-import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
-import { genderEnum } from '../../../db/schema/worker.js';
+import { Transform } from 'class-transformer';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
+import {
+  genderEnum,
+  renewalDecisionValues,
+} from '../../../db/schema/worker.js';
 
 export class WorkerCreateDto {
   @IsUUID()
@@ -36,4 +48,40 @@ export class WorkerCreateDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === ''
+      ? undefined
+      : value === null
+        ? null
+        : Number(value),
+  )
+  @IsInt()
+  @Min(0)
+  total?: number;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === ''
+      ? undefined
+      : value === null
+        ? null
+        : Number(value),
+  )
+  @IsInt()
+  @Min(0)
+  deposit?: number | null;
+
+  @IsOptional()
+  @IsIn(renewalDecisionValues)
+  renewalDecision?: (typeof renewalDecisionValues)[number];
+
+  @IsOptional()
+  @IsDateString()
+  workPermitVisaDate?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  reportDate?: string | null;
 }

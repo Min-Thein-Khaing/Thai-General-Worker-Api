@@ -7,11 +7,13 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../../common/decorators/role.decorator.js';
 import { RoleGuard } from '../../common/guards/role.guard.js';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { YearCreateDto } from './dto/year-create.dto.js';
 import { YearUpdateDto } from './dto/year-update.dto.js';
 import { YearService } from './providers/year.service.js';
@@ -29,8 +31,8 @@ export class YearController {
 
   @Get()
   @Roles('ADMIN')
-  findAll() {
-    return this.yearService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.yearService.findAll(query);
   }
 
   @Get(':id')

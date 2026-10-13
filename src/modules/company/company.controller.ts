@@ -7,11 +7,13 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../../common/decorators/role.decorator.js';
 import { RoleGuard } from '../../common/guards/role.guard.js';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CompanyCreateDto } from './dto/company-create.dto.js';
 import { CompanyUpdateDto } from './dto/company-update.dto.js';
 import { CompanyService } from './providers/company.service.js';
@@ -29,8 +31,8 @@ export class CompanyController {
 
   @Get()
   @Roles('ADMIN')
-  findAll() {
-    return this.companyService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.companyService.findAll(query);
   }
 
   @Get(':id')

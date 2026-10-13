@@ -7,16 +7,19 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { and, asc, count, desc, eq, like, or, SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, SQL } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../../db/schema/index.js';
 import { user } from '../../../db/schema/user.js';
 import { UserCreateDto } from '../dto/user-create.dto.js';
 import { UserUpdateDto } from '../dto/user-update.dto.js';
 import { HashProvider } from '../../auth/providers/hash.provider.js';
-import { FindAllQuery } from '../interface/user-query.interface.js';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto.js';
 import { PaginatedResponse } from '../../../common/interface/responseTypePagination.js';
-import { ConfigService } from '@nestjs/config';
+import {
+  createPaginatedResponse,
+  getPagination,
+} from '../../../common/utils/pagination.js';
 import { UploadService } from '../../upload/upload.service.js';
 import type {} from 'multer';
 
@@ -37,7 +40,6 @@ export class UserService {
     @Inject('DB')
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly hashProvider: HashProvider,
-    private readonly configService: ConfigService,
     private readonly uploadService: UploadService,
   ) {}
 
@@ -80,20 +82,21 @@ export class UserService {
   }
 
   async findAll(
-    query: FindAllQuery = {},
-  ): Promise<PaginatedResponse<typeof schema.user.$inferInsert>> {
-    const page = Number(query.page) || 1;
-    const perPage = Number(query.per_page) || 10;
-    const offset = (page - 1) * perPage;
-    const limit = perPage;
+    query: PaginationQueryDto = {},
+  ): Promise<
+    PaginatedResponse<
+      Pick<typeof schema.user.$inferSelect, keyof typeof publicUserFields>
+    >
+  > {
+    const { perPage, offset } = getPagination(query);
 
     const filters: SQL[] = [eq(user.isArchived, false)];
 
     if (query.search) {
       filters.push(
         or(
-          like(schema.user.fullName, `%${query.search}%`),
-          like(schema.user.email, `%${query.search}%`),
+          ilike(schema.user.fullName, `%${query.search}%`),
+          ilike(schema.user.email, `%${query.search}%`),
         )!,
       );
     }
@@ -121,39 +124,17 @@ export class UserService {
       .from(schema.user)
       .where(whereClause);
 
-    const total = Number(totalCount); //total count
-    const lastPage = Math.ceil(total / perPage) || 1; //last page
+    const total = Number(totalCount);
 
     const users = await this.db
-      .select()
+      .select(publicUserFields)
       .from(schema.user)
       .where(whereClause)
-      .limit(limit)
+      .limit(perPage)
       .offset(offset)
       .orderBy(sortOrder);
 
-    const from = total > 0 ? offset + 1 : null;
-    const to = total > 0 ? Math.min(offset + users.length, total) : null;
-    const baseUrl = `${this.configService.get('ALLOWED_ORIGINS')}/api/user`;
-
-    return {
-      data: users,
-      links: {
-        first: `${baseUrl}?page=1`,
-        last: `${baseUrl}?page=${lastPage}`,
-        prev: page > 1 ? `${baseUrl}?page=${page - 1}` : null,
-        next: page < lastPage ? `${baseUrl}?page=${page + 1}` : null,
-      },
-      meta: {
-        current_page: page,
-        from,
-        last_page: lastPage,
-        path: baseUrl,
-        per_page: perPage,
-        to,
-        total,
-      },
-    };
+    return createPaginatedResponse(users, total, query, '/api/user');
   }
   async findMine(ownId: string) {
     const [foundUser] = await this.db

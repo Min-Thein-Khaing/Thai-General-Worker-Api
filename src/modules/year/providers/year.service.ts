@@ -1,11 +1,16 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../../db/schema/index.js';
 import { year } from '../../../db/schema/year.js';
 import { YearCreateDto } from '../dto/year-create.dto.js';
 import { YearUpdateDto } from '../dto/year-update.dto.js';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto.js';
+import {
+  createPaginatedResponse,
+  getPagination,
+} from '../../../common/utils/pagination.js';
 
 @Injectable()
 export class YearService {
@@ -21,8 +26,44 @@ export class YearService {
     return { message: 'Year created successfully', data: created };
   }
 
-  async findAll() {
-    return this.db.select().from(year);
+  async findAll(query: PaginationQueryDto = {}) {
+    const { perPage, offset } = getPagination(query);
+    const searchFilter = query.search
+      ? or(
+          ilike(sql<string>`${year.startYear}::text`, `%${query.search}%`),
+          ilike(sql<string>`${year.endYear}::text`, `%${query.search}%`),
+        )
+      : undefined;
+    const [{ totalCount }] = await this.db
+      .select({ totalCount: count() })
+      .from(year)
+      .where(searchFilter);
+    const allowedSortColumns = {
+      startYear: year.startYear,
+      endYear: year.endYear,
+      createdAt: year.createdAt,
+      id: year.id,
+    } as const;
+    const sortColumn =
+      query.sort_by && query.sort_by in allowedSortColumns
+        ? allowedSortColumns[query.sort_by as keyof typeof allowedSortColumns]
+        : year.createdAt;
+    const sortOrder =
+      query.sort_order === 'asc' ? asc(sortColumn) : desc(sortColumn);
+    const years = await this.db
+      .select()
+      .from(year)
+      .where(searchFilter)
+      .limit(perPage)
+      .offset(offset)
+      .orderBy(sortOrder);
+
+    return createPaginatedResponse(
+      years,
+      Number(totalCount),
+      query,
+      '/api/year',
+    );
   }
 
   async findOne(id: string) {

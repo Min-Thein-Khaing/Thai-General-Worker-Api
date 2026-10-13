@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -19,6 +20,7 @@ import { UserService } from './providers/user.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../../common/decorators/role.decorator.js';
 import { RoleGuard } from '../../common/guards/role.guard.js';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 
 const userImageInterceptor = FileInterceptor('image', {
   limits: { fileSize: 2 * 1024 * 1024 },
@@ -54,8 +56,8 @@ export class UserController {
 
   @Get()
   @Roles('ADMIN')
-  findAll() {
-    return this.userService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.userService.findAll(query);
   }
 
   @Get(':id')
