@@ -64,7 +64,7 @@ export const workerRelations = relations(worker, ({ one, many }) => ({
 }));
 
 export const documentRelations = relations(document, ({ one }) => ({
-  uploadedBy: one(user, {
+  user: one(user, {
     fields: [document.userId],
     references: [user.id],
   }),

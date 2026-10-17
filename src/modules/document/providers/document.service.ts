@@ -121,9 +121,17 @@ export class DocumentService {
       .values(uploaded)
       .returning();
 
+    const ids = inserted.map((d) => d.id);
+    const docsWithUser = await this.db.query.document.findMany({
+      where: (doc, { inArray }) => inArray(doc.id, ids),
+      with: {
+        user: true,
+      },
+    });
+
     return {
       message: `${inserted.length} document(s) uploaded successfully`,
-      data: inserted,
+      data: docsWithUser,
     };
   }
 
@@ -138,12 +146,25 @@ export class DocumentService {
       throw new NotFoundException(`Worker ${workerId} not found`);
     }
 
-    const docs = await this.db
-      .select()
-      .from(document)
-      .where(eq(document.workerId, workerId));
+    const docs = await this.db.query.document.findMany({
+      where: eq(document.workerId, workerId),
+      with: {
+        user: true,
+      },
+    });
 
     return { total: docs.length, data: docs };
+  }
+
+  async findOne(id: string) {
+    const found = await this.db.query.document.findFirst({
+      where: eq(document.id, id),
+      with: {
+        user: true,
+      },
+    });
+    if (!found) throw new NotFoundException(`Document ${id} not found`);
+    return found;
   }
 
   // ── Download: Presigned URL ထုတ်ပေး (15 min သက်တမ်း) ─────────────────────

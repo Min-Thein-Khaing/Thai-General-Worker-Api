@@ -23,7 +23,8 @@ export class YearService {
       .insert(year)
       .values({ id: randomUUID(), ...dto })
       .returning();
-    return { message: 'Year created successfully', data: created };
+    const data = await this.findOne(created.id);
+    return { message: 'Year created successfully', data };
   }
 
   async findAll(query: PaginationQueryDto = {}) {
@@ -50,13 +51,15 @@ export class YearService {
         : year.createdAt;
     const sortOrder =
       query.sort_order === 'asc' ? asc(sortColumn) : desc(sortColumn);
-    const years = await this.db
-      .select()
-      .from(year)
-      .where(searchFilter)
-      .limit(perPage)
-      .offset(offset)
-      .orderBy(sortOrder);
+    const years = await this.db.query.year.findMany({
+      where: searchFilter,
+      with: {
+        user: true,
+      },
+      limit: perPage,
+      offset: offset,
+      orderBy: sortOrder,
+    });
 
     return createPaginatedResponse(
       years,
@@ -67,11 +70,12 @@ export class YearService {
   }
 
   async findOne(id: string) {
-    const [found] = await this.db
-      .select()
-      .from(year)
-      .where(eq(year.id, id))
-      .limit(1);
+    const found = await this.db.query.year.findFirst({
+      where: eq(year.id, id),
+      with: {
+        user: true,
+      },
+    });
     if (!found) throw new NotFoundException(`Year ${id} not found`);
     return found;
   }
@@ -83,7 +87,8 @@ export class YearService {
       .where(eq(year.id, id))
       .returning();
     if (!updated) throw new NotFoundException(`Year ${id} not found`);
-    return { message: 'Year updated successfully', data: updated };
+    const data = await this.findOne(id);
+    return { message: 'Year updated successfully', data };
   }
 
   async remove(id: string) {

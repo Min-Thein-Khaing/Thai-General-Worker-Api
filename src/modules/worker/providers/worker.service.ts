@@ -51,7 +51,8 @@ export class WorkerService {
           imageUrl: uploadedImage?.url,
         })
         .returning();
-      return { message: 'Worker created successfully', data: created };
+      const data = await this.findOne(created.id);
+      return { message: 'Worker created successfully', data };
     } catch (error) {
       if (uploadedImage) {
         try {
@@ -118,7 +119,10 @@ export class WorkerService {
     const sortOrder =
       query.sort_order === 'asc' ? asc(sortColumn) : desc(sortColumn);
     const workers = await this.db
-      .select({ worker })
+      .select({
+        worker,
+        user: schema.user,
+      })
       .from(worker)
       .leftJoin(schema.user, eq(worker.userId, schema.user.id))
       .where(whereClause)
@@ -127,7 +131,10 @@ export class WorkerService {
       .orderBy(sortOrder);
 
     return createPaginatedResponse(
-      workers.map(({ worker: workerRecord }) => workerRecord),
+      workers.map(({ worker: workerRecord, user: userRecord }) => ({
+        ...workerRecord,
+        user: userRecord,
+      })),
       Number(totalCount),
       query,
       '/api/worker',
@@ -183,10 +190,12 @@ export class WorkerService {
     const reminderDate = new Date(`${todayString}T00:00:00.000Z`);
     reminderDate.setUTCDate(reminderDate.getUTCDate() + 7);
     const reminderDateString = reminderDate.toISOString().slice(0, 10);
-    const workersWithUpcomingReports = await this.db
-      .select()
-      .from(worker)
-      .where(eq(worker.reportDate, reminderDateString));
+    const workersWithUpcomingReports = await this.db.query.worker.findMany({
+      where: eq(worker.reportDate, reminderDateString),
+      with: {
+        user: true,
+      },
+    });
 
     return workersWithUpcomingReports.map((upcomingWorker) => ({
       worker: upcomingWorker,
@@ -196,11 +205,12 @@ export class WorkerService {
   }
 
   async findOne(id: string) {
-    const [found] = await this.db
-      .select()
-      .from(worker)
-      .where(eq(worker.id, id))
-      .limit(1);
+    const found = await this.db.query.worker.findFirst({
+      where: eq(worker.id, id),
+      with: {
+        user: true,
+      },
+    });
     if (!found) throw new NotFoundException(`Worker ${id} not found`);
     return found;
   }
@@ -265,7 +275,8 @@ export class WorkerService {
       await this.uploadService.deleteWorkerImage(existingWorker.imageUrl);
     }
 
-    return { message: 'Worker updated successfully', data: updated };
+    const data = await this.findOne(id);
+    return { message: 'Worker updated successfully', data };
   }
 
   async remove(id: string) {

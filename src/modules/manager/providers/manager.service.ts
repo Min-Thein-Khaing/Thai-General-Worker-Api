@@ -23,7 +23,8 @@ export class ManagerService {
       .insert(manager)
       .values({ id: randomUUID(), ...dto })
       .returning();
-    return { message: 'Manager created successfully', data: created };
+    const data = await this.findOne(created.id);
+    return { message: 'Manager created successfully', data };
   }
 
   async findAll(query: PaginationQueryDto = {}) {
@@ -58,7 +59,10 @@ export class ManagerService {
     const sortOrder =
       query.sort_order === 'asc' ? asc(sortColumn) : desc(sortColumn);
     const managers = await this.db
-      .select()
+      .select({
+        manager,
+        user: schema.user,
+      })
       .from(manager)
       .leftJoin(schema.user, eq(manager.userId, schema.user.id))
       .leftJoin(schema.company, eq(manager.companyId, schema.company.id))
@@ -68,7 +72,10 @@ export class ManagerService {
       .orderBy(sortOrder);
 
     return createPaginatedResponse(
-      managers.map(({ manager: managerRecord }) => managerRecord),
+      managers.map(({ manager: managerRecord, user: userRecord }) => ({
+        ...managerRecord,
+        user: userRecord,
+      })),
       Number(totalCount),
       query,
       '/api/manager',
@@ -76,11 +83,12 @@ export class ManagerService {
   }
 
   async findOne(id: string) {
-    const [found] = await this.db
-      .select()
-      .from(manager)
-      .where(eq(manager.id, id))
-      .limit(1);
+    const found = await this.db.query.manager.findFirst({
+      where: eq(manager.id, id),
+      with: {
+        user: true,
+      },
+    });
     if (!found) throw new NotFoundException(`Manager ${id} not found`);
     return found;
   }
@@ -92,7 +100,8 @@ export class ManagerService {
       .where(eq(manager.id, id))
       .returning();
     if (!updated) throw new NotFoundException(`Manager ${id} not found`);
-    return { message: 'Manager updated successfully', data: updated };
+    const data = await this.findOne(id);
+    return { message: 'Manager updated successfully', data };
   }
 
   async remove(id: string) {

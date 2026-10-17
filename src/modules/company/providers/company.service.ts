@@ -23,7 +23,8 @@ export class CompanyService {
       .insert(company)
       .values({ id: randomUUID(), ...dto })
       .returning();
-    return { message: 'Company created successfully', data: created };
+    const data = await this.findOne(created.id);
+    return { message: 'Company created successfully', data };
   }
 
   async findAll(query: PaginationQueryDto = {}) {
@@ -55,13 +56,15 @@ export class CompanyService {
         : company.createdAt;
     const sortOrder =
       query.sort_order === 'asc' ? asc(sortColumn) : desc(sortColumn);
-    const companies = await this.db
-      .select()
-      .from(company)
-      .where(whereClause)
-      .limit(perPage)
-      .offset(offset)
-      .orderBy(sortOrder);
+    const companies = await this.db.query.company.findMany({
+      where: whereClause,
+      with: {
+        user: true,
+      },
+      limit: perPage,
+      offset: offset,
+      orderBy: sortOrder,
+    });
 
     return createPaginatedResponse(
       companies,
@@ -72,11 +75,12 @@ export class CompanyService {
   }
 
   async findOne(id: string) {
-    const [found] = await this.db
-      .select()
-      .from(company)
-      .where(and(eq(company.id, id), eq(company.isArchived, false)))
-      .limit(1);
+    const found = await this.db.query.company.findFirst({
+      where: and(eq(company.id, id), eq(company.isArchived, false)),
+      with: {
+        user: true,
+      },
+    });
     if (!found) throw new NotFoundException(`Company ${id} not found`);
     return found;
   }
@@ -88,7 +92,8 @@ export class CompanyService {
       .where(and(eq(company.id, id), eq(company.isArchived, false)))
       .returning();
     if (!updated) throw new NotFoundException(`Company ${id} not found`);
-    return { message: 'Company updated successfully', data: updated };
+    const data = await this.findOne(id);
+    return { message: 'Company updated successfully', data };
   }
 
   async remove(id: string) {
