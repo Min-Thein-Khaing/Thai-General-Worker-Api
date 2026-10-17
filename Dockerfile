@@ -7,7 +7,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install --include=optional --no-audit --no-fund
 
 COPY nest-cli.json tsconfig.json tsconfig.build.json ./
 COPY src ./src
