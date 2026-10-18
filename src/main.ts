@@ -7,10 +7,15 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useBodyParser('json', { limit: '5mb' });
   app.useBodyParser('urlencoded', { limit: '5mb', extended: true });
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',') 
-      : 'http://localhost:3000',
+    origin:
+      allowedOrigins && allowedOrigins.length > 0
+        ? allowedOrigins
+        : 'http://localhost:3000',
     credentials: true,
   });
   app.setGlobalPrefix('api');

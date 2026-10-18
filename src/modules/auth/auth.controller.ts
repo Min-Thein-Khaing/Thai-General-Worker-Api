@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Header,
   Post,
   Req,
   UnauthorizedException,
@@ -18,6 +19,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @Header('Cache-Control', 'no-store')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
